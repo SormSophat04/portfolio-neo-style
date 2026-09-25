@@ -37,6 +37,8 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
     saveExperience,
     deleteExperience,
     verifyPasscode,
+    updatePasscode,
+    adminPasscode,
   } = usePortfolio();
 
   // Authentication gate state
@@ -45,6 +47,9 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
   });
   const [passcode, setPasscode] = useState('');
   const [authError, setAuthError] = useState(false);
+  const [initialPasscode, setInitialPasscode] = useState('');
+  const [confirmInitialPasscode, setConfirmInitialPasscode] = useState('');
+  const [setupError, setSetupError] = useState('');
 
   // Active tab state
   const [activeTab, setActiveTab] = useState<'projects' | 'skills' | 'experience' | 'security' | 'firebase'>('projects');
@@ -73,6 +78,21 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
     } else {
       setAuthError(true);
     }
+  };
+
+  const handleInitialSetup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (initialPasscode.length < 4) {
+      setSetupError('Passcode must be at least 4 characters long.');
+      return;
+    }
+    if (initialPasscode !== confirmInitialPasscode) {
+      setSetupError('Passcodes do not match.');
+      return;
+    }
+    await updatePasscode(initialPasscode);
+    setIsAuthenticated(true);
+    localStorage.setItem('neo_admin_auth', 'true');
   };
 
   const handleLogout = () => {
@@ -158,48 +178,86 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
             Enter passcode to manage portfolio records, skills, and Firestore cloud synchronization.
           </p>
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <label className="block font-mono text-xs font-black uppercase mb-1">
-                PASSCODE (DEFAULT: <code className="bg-[#FFD84D] px-1 border border-[#111111]">admin123</code>)
-              </label>
-              <input
-                type="password"
-                required
-                value={passcode}
-                onChange={(e) => setPasscode(e.target.value)}
-                placeholder="Enter admin passcode"
-                className="w-full border-2 border-[#111111] p-2.5 font-mono text-sm bg-[#F5F0E8] focus:bg-white focus:outline-none shadow-[2px_2px_0px_#111111]"
-              />
-              {authError && (
-                <p className="font-mono text-xs font-bold text-red-600 mt-1">
-                  Invalid passcode. Use "admin123" for demo mode.
-                </p>
-              )}
-            </div>
+          {!adminPasscode ? (
+            <form onSubmit={handleInitialSetup} className="space-y-4">
+              <div className="p-3 bg-[#FFD84D]/30 border-2 border-[#111111] font-mono text-xs font-bold text-[#111111]">
+                No admin passcode is configured in Firebase. Create your initial passcode below.
+              </div>
+              <div>
+                <label className="block font-mono text-xs font-black uppercase mb-1">
+                  NEW ADMIN PASSCODE *
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={initialPasscode}
+                  onChange={(e) => setInitialPasscode(e.target.value)}
+                  placeholder="Create passcode (min. 4 chars)"
+                  className="w-full border-2 border-[#111111] p-2.5 font-mono text-sm bg-[#F5F0E8] focus:bg-white focus:outline-none shadow-[2px_2px_0px_#111111]"
+                />
+              </div>
+              <div>
+                <label className="block font-mono text-xs font-black uppercase mb-1">
+                  CONFIRM PASSCODE *
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={confirmInitialPasscode}
+                  onChange={(e) => setConfirmInitialPasscode(e.target.value)}
+                  placeholder="Repeat passcode"
+                  className="w-full border-2 border-[#111111] p-2.5 font-mono text-sm bg-[#F5F0E8] focus:bg-white focus:outline-none shadow-[2px_2px_0px_#111111]"
+                />
+                {setupError && (
+                  <p className="font-mono text-xs font-bold text-red-600 mt-1">
+                    {setupError}
+                  </p>
+                )}
+              </div>
+              <BrutalButton
+                variant="yellow"
+                size="md"
+                type="submit"
+                icon={<Unlock className="w-4 h-4" />}
+                iconPosition="right"
+                className="w-full"
+              >
+                INITIALIZE PASSCODE
+              </BrutalButton>
+            </form>
+          ) : (
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block font-mono text-xs font-black uppercase mb-1">
+                  ADMIN PASSCODE *
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={passcode}
+                  onChange={(e) => setPasscode(e.target.value)}
+                  placeholder="Enter admin passcode"
+                  className="w-full border-2 border-[#111111] p-2.5 font-mono text-sm bg-[#F5F0E8] focus:bg-white focus:outline-none shadow-[2px_2px_0px_#111111]"
+                />
+                {authError && (
+                  <p className="font-mono text-xs font-bold text-red-600 mt-1">
+                    Incorrect passcode. Please try again.
+                  </p>
+                )}
+              </div>
 
-            <BrutalButton
-              variant="yellow"
-              size="md"
-              type="submit"
-              icon={<Unlock className="w-4 h-4" />}
-              iconPosition="right"
-              className="w-full"
-            >
-              AUTHENTICATE ACCESS
-            </BrutalButton>
-
-            <button
-              type="button"
-              onClick={() => {
-                setIsAuthenticated(true);
-                localStorage.setItem('neo_admin_auth', 'true');
-              }}
-              className="w-full text-center font-mono text-xs font-bold text-gray-500 hover:text-black pt-2 cursor-pointer"
-            >
-              Quick Dev Mode Bypass →
-            </button>
-          </form>
+              <BrutalButton
+                variant="yellow"
+                size="md"
+                type="submit"
+                icon={<Unlock className="w-4 h-4" />}
+                iconPosition="right"
+                className="w-full"
+              >
+                AUTHENTICATE ACCESS
+              </BrutalButton>
+            </form>
+          )}
         </BrutalCard>
       </div>
     );

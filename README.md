@@ -102,7 +102,7 @@ The portfolio comes equipped with an interactive **Neo-Brutalist CMS Dashboard**
 ### Accessing the Dashboard:
 - Click the **`CMS / ADMIN ⚡`** button in the Navbar or top status ticker.
 - Or navigate directly to `http://localhost:5173/#admin` (or `your-domain/#admin`).
-- **Passcode:** Default is `admin123`.
+- **Passcode:** Dynamic authentication persisted in Firebase Firestore (`settings/admin`). If accessing an unconfigured project for the first time, you will be prompted to initialize your initial admin passcode.
 
 ### Changing the Passcode:
 1. Log in to the Admin Dashboard.

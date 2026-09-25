@@ -12,6 +12,7 @@ import { GitHubResume } from './sections/GitHubResume';
 import { Contact } from './sections/Contact';
 import { AdminDashboard } from './components/dashboard/AdminDashboard';
 import { LayoutDashboard } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 
 const MainPortfolio: React.FC<{ onOpenAdmin: () => void }> = ({ onOpenAdmin }) => {
   return (
@@ -92,6 +93,7 @@ export const App: React.FC = () => {
       ) : (
         <MainPortfolio onOpenAdmin={openAdmin} />
       )}
+      <Analytics />
     </PortfolioProvider>
   );
 };

@@ -51,7 +51,7 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [projects, setProjects] = useState<Project[]>([]);
   const [skills, setSkills] = useState<SkillCategory[]>([]);
   const [experiences, setExperiences] = useState<ExperienceItem[]>([]);
-  const [adminPasscode, setAdminPasscode] = useState<string>('admin123');
+  const [adminPasscode, setAdminPasscode] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [firebaseConfig, setFirebaseConfig] = useState<FirebaseConfig | null>(null);
   const [isFirebaseConnected, setIsFirebaseConnected] = useState<boolean>(false);
@@ -182,7 +182,11 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const verifyPasscode = (candidate: string): boolean => {
     const trimmed = candidate.trim();
-    return trimmed === adminPasscode.trim() || trimmed === 'sophat2026';
+    if (!adminPasscode) {
+      // If no passcode has been set in Firestore yet, allow setting or empty check
+      return false;
+    }
+    return trimmed === adminPasscode.trim();
   };
 
   return (

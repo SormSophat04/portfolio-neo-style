@@ -112,9 +112,7 @@ const STORAGE_KEYS = {
   PASSCODE: 'neo_admin_passcode',
 };
 
-const DEFAULT_PASSCODE = 'admin123';
-
-// --- PASSCODE / AUTH PERSISTENCE ---
+// --- PASSCODE / AUTH PERSISTENCE (PURE CLOUD FIRESTORE) ---
 
 export const fetchAdminPasscode = async (): Promise<string> => {
   const firestore = getDb();
@@ -136,7 +134,7 @@ export const fetchAdminPasscode = async (): Promise<string> => {
     return local;
   }
 
-  return DEFAULT_PASSCODE;
+  return '';
 };
 
 export const saveAdminPasscode = async (newPasscode: string): Promise<void> => {
