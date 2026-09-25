@@ -2,10 +2,11 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { SectionHeader } from '../components/SectionHeader';
 import { BrutalCard } from '../components/BrutalCard';
-import { EXPERIENCES } from '../data/experience';
+import { usePortfolio } from '../context/PortfolioContext';
 import { Landmark, CheckSquare, MapPin, Terminal } from 'lucide-react';
 
 export const Experience: React.FC = () => {
+  const { experiences } = usePortfolio();
   return (
     <section className="py-16 md:py-24 border-t-[3px] border-[#111111] bg-[#F5F0E8]" id="experience">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -17,7 +18,7 @@ export const Experience: React.FC = () => {
         />
 
         <div className="max-w-4xl mx-auto">
-          {EXPERIENCES.map((exp, index) => (
+          {experiences.map((exp, index) => (
             <motion.div
               key={exp.id}
               initial={{ opacity: 0, y: 15 }}

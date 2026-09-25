@@ -90,12 +90,42 @@ npm run preview
 
 ---
 
+## ⚡ Admin Dashboard & Firebase Integration
+
+The portfolio comes equipped with an interactive **Neo-Brutalist CMS Dashboard** allowing you to dynamically add, edit, and delete:
+- **Projects:** Add custom titles, tech pills, feature bullet points, GitHub/live links, and case study notes.
+- **Skills:** Add or remove tech tags under existing domains or create entirely new skill categories.
+- **Experience:** Add and manage job roles, internships, and company descriptions.
+- **Security & Passcode:** Easily change your admin login passcode directly in the dashboard and persist it securely in Firebase Firestore (`settings/admin`).
+- **Cloud Persistence:** Seamlessly connect to Google Cloud **Firebase Firestore** with local browser cache fallback.
+
+### Accessing the Dashboard:
+- Click the **`CMS / ADMIN ⚡`** button in the Navbar or top status ticker.
+- Or navigate directly to `http://localhost:5173/#admin` (or `your-domain/#admin`).
+- **Passcode:** Default is `admin123`.
+
+### Changing the Passcode:
+1. Log in to the Admin Dashboard.
+2. Go to the **SECURITY / PASSCODE** tab.
+3. Enter your current passcode, type your new passcode, and confirm it.
+4. Click **`SAVE NEW PASSCODE TO FIREBASE`**.
+5. Your new passcode is immediately updated in Cloud Firestore!
+
+### Setting up Firebase Firestore:
+1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com).
+2. Create a **Firestore Database** in test mode or with your preferred rules.
+3. In Project Settings, add a **Web App** and copy your Firebase Config object.
+4. Enter the credentials either in the **Firebase & Sync** tab inside the dashboard, or in your `.env` file (see `.env.example`).
+5. Click **"Seed Data To Firestore"** to immediately upload all default projects, skills, and experience to your live cloud database!
+
+---
+
 ## ✏️ Customizing Data
 
-All data is strictly decoupled into `src/data/`:
+All data can be managed either via the **Admin Dashboard** or directly in code in `src/data/`:
 
-1. **Replace Projects:** Edit `src/data/projects.ts` to update repository links, descriptions, and feature lists.
-2. **Replace Skills:** Edit `src/data/skills.ts` to add or modify languages, databases, or cloud tools.
-3. **Replace Experience:** Edit `src/data/experience.ts` to add roles or update company details.
-4. **Update Contact Info:** Update email and LinkedIn placeholders in `src/sections/Contact.tsx` and `src/components/Footer.tsx`.
+1. **Projects:** `src/data/projects.ts` or via the Dashboard Projects tab.
+2. **Skills:** `src/data/skills.ts` or via the Dashboard Skills tab.
+3. **Experience:** `src/data/experience.ts` or via the Dashboard Experience tab.
+4. **Contact Info:** Update email and LinkedIn placeholders in `src/sections/Contact.tsx` and `src/components/Footer.tsx`.
 5. **Resume PDF:** Place your CV file at `public/resume.pdf` to activate direct downloads.

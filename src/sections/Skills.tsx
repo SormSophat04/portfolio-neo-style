@@ -2,17 +2,18 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { SectionHeader } from '../components/SectionHeader';
 import { SkillCard } from '../components/SkillCard';
-import { SKILL_CATEGORIES } from '../data/skills';
+import { usePortfolio } from '../context/PortfolioContext';
 import { BrutalCard } from '../components/BrutalCard';
 import { CheckCircle2, ShieldCheck } from 'lucide-react';
 
 export const Skills: React.FC = () => {
+  const { skills } = usePortfolio();
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
 
   const filteredCategories =
     selectedFilter === 'all'
-      ? SKILL_CATEGORIES
-      : SKILL_CATEGORIES.filter((cat) => cat.id === selectedFilter);
+      ? skills
+      : skills.filter((cat) => cat.id === selectedFilter);
 
   return (
     <section className="py-16 md:py-24 border-t-[3px] border-[#111111] bg-[#F5F0E8]" id="skills">
@@ -35,10 +36,10 @@ export const Skills: React.FC = () => {
                 : 'bg-white text-[#111111] hover:bg-[#FFD84D]'
             }`}
           >
-            ALL STACKS ({SKILL_CATEGORIES.reduce((acc, c) => acc + c.skills.length, 0)})
+            ALL STACKS ({skills.reduce((acc, c) => acc + c.skills.length, 0)})
           </button>
 
-          {SKILL_CATEGORIES.map((cat) => {
+          {skills.map((cat) => {
             const isSelected = selectedFilter === cat.id;
             return (
               <button

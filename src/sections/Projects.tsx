@@ -3,12 +3,13 @@ import { motion } from 'framer-motion';
 import { SectionHeader } from '../components/SectionHeader';
 import { ProjectCard } from '../components/ProjectCard';
 import { ProjectModal } from '../components/ProjectModal';
-import { PROJECTS } from '../data/projects';
+import { usePortfolio } from '../context/PortfolioContext';
 import type { Project } from '../types';
 import { FolderGit2, Info } from 'lucide-react';
 import { BrutalCard } from '../components/BrutalCard';
 
 export const Projects: React.FC = () => {
+  const { projects } = usePortfolio();
   const [activeProjectModal, setActiveProjectModal] = useState<Project | null>(null);
 
   return (
@@ -25,13 +26,13 @@ export const Projects: React.FC = () => {
 
           <div className="hidden lg:flex items-center gap-2 border-2 border-[#111111] bg-white px-3 py-1.5 font-mono text-xs font-bold shadow-[2px_2px_0px_#111111]">
             <FolderGit2 className="w-4 h-4 text-[#111111]" />
-            <span>4 PROJECTS CATALOGUED</span>
+            <span>{projects.length} PROJECTS CATALOGUED</span>
           </div>
         </div>
 
         {/* Projects Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
-          {PROJECTS.map((project, index) => (
+          {projects.map((project, index) => (
             <motion.div
               key={project.id}
               initial={{ opacity: 0, y: 20 }}

@@ -16,7 +16,7 @@ const NAV_LINKS: NavLink[] = [
   { label: 'CONTACT', href: '#contact' },
 ];
 
-export const Navbar: React.FC = () => {
+export const Navbar: React.FC<{ onOpenAdmin?: () => void }> = ({ onOpenAdmin }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeSection, setActiveSection] = useState<string>('');
 
@@ -97,7 +97,7 @@ export const Navbar: React.FC = () => {
         </div>
 
         {/* Desktop Actions */}
-        <div className="hidden sm:flex items-center gap-3">
+        <div className="hidden sm:flex items-center gap-2.5">
           <BrutalButton
             variant="green"
             size="sm"
@@ -107,6 +107,15 @@ export const Navbar: React.FC = () => {
           >
             LET'S TALK
           </BrutalButton>
+
+          <button
+            type="button"
+            onClick={onOpenAdmin}
+            className="px-2.5 py-1.5 border-2 border-[#111111] bg-[#FFD84D] font-mono text-xs font-black uppercase shadow-[2px_2px_0px_#111111] hover:-translate-y-0.5 transition-transform cursor-pointer"
+            title="Open Admin CMS Dashboard"
+          >
+            CMS / ADMIN ⚡
+          </button>
         </div>
 
         {/* Mobile Menu Button */}
@@ -157,6 +166,16 @@ export const Navbar: React.FC = () => {
               >
                 GET IN TOUCH
               </BrutalButton>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsOpen(false);
+                  onOpenAdmin?.();
+                }}
+                className="px-3 border-2 border-[#111111] bg-[#FF6B9D] font-mono text-xs font-black uppercase shadow-[2px_2px_0px_#111111] cursor-pointer shrink-0"
+              >
+                ADMIN ⚡
+              </button>
             </div>
           </div>
         </div>
