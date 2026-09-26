@@ -89,16 +89,16 @@ export const Contact: React.FC = () => {
                       EMAIL ADDRESS
                     </span>
                     <p className="font-mono text-sm md:text-base font-bold text-[#111111] break-all">
-                      contact@sormsophat.dev
+                      sophatsorm2023@gmail.com
                     </p>
-                    <span className="font-mono text-[10px] font-black text-amber-700 bg-amber-100 px-1.5 py-0.5 border border-amber-300 inline-block mt-1">
+                    {/* <span className="font-mono text-[10px] font-black text-amber-700 bg-amber-100 px-1.5 py-0.5 border border-amber-300 inline-block mt-1">
                       [Placeholder - Replace with your email]
-                    </span>
+                    </span> */}
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleCopy('contact@sormsophat.dev', 'email')}
+                  onClick={() => handleCopy('sophatsorm2023@gmail.com', 'email')}
                   className="p-2 border-2 border-[#111111] bg-white hover:bg-[#FFD84D] transition-colors shadow-[2px_2px_0px_#111111] cursor-pointer"
                   title="Copy email address"
                   aria-label="Copy email address"
@@ -164,16 +164,21 @@ export const Contact: React.FC = () => {
                       LINKEDIN NETWORK
                     </span>
                     <p className="font-mono text-sm md:text-base font-bold text-[#111111] break-all">
-                      linkedin.com/in/sorm-sophat
+                      https://www.linkedin.com/in/sorm-sophat-6b70a03ba
                     </p>
-                    <span className="font-mono text-[10px] font-black text-amber-700 bg-amber-100 px-1.5 py-0.5 border border-amber-300 inline-block mt-1">
-                      [Placeholder - Replace with your LinkedIn URL]
-                    </span>
+                    <a
+                      href="https://www.linkedin.com/in/sorm-sophat-6b70a03ba"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-mono text-xs font-bold text-[#4D7CFE] hover:underline inline-block mt-1"
+                    >
+                      Visit LinkedIn Profile →
+                    </a>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleCopy('https://linkedin.com/in/sorm-sophat', 'linkedin')}
+                  onClick={() => handleCopy('https://www.linkedin.com/in/sorm-sophat-6b70a03ba', 'linkedin')}
                   className="p-2 border-2 border-[#111111] bg-white hover:bg-[#FFD84D] transition-colors shadow-[2px_2px_0px_#111111] cursor-pointer"
                   title="Copy LinkedIn link"
                   aria-label="Copy LinkedIn URL"
