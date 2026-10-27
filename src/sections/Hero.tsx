@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { BrutalButton } from '../components/BrutalButton';
 import { BrutalCard } from '../components/BrutalCard';
+import { CVSelectModal } from '../components/CVSelectModal';
+import { usePortfolio } from '../context/PortfolioContext';
 import {
   ArrowDown,
   Download,
@@ -23,6 +25,9 @@ const HERO_TECH_TAGS = [
 ];
 
 export const Hero: React.FC = () => {
+  const { cvs } = usePortfolio();
+  const [showCVModal, setShowCVModal] = useState(false);
+
   return (
     <section className="relative pt-8 pb-16 md:pt-14 md:pb-24 overflow-hidden" id="hero">
       {/* Decorative Background Elements */}
@@ -93,15 +98,16 @@ export const Hero: React.FC = () => {
               <BrutalButton
                 variant="white"
                 size="lg"
-                href="#resume"
+                onClick={() => setShowCVModal(true)}
                 icon={<Download className="w-5 h-5" />}
                 iconPosition="left"
-                aria-label="Download CV"
+                aria-label="Select and Download CV"
               >
-                DOWNLOAD CV
+                SELECT & DOWNLOAD CV
               </BrutalButton>
             </div>
           </motion.div>
+
 
           {/* Right Column: Neo-Brutalist Status Card & Interactive Terminal Preview (5 cols) */}
           <motion.div
@@ -182,6 +188,14 @@ export const Hero: React.FC = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Recruiter / HR Multi-CV Selection Modal */}
+      <CVSelectModal
+        isOpen={showCVModal}
+        onClose={() => setShowCVModal(false)}
+        cvs={cvs}
+      />
     </section>
   );
 };
+

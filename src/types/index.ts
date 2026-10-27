@@ -46,3 +46,17 @@ export interface ArchitectureNode {
   samplePayload?: string;
   accentColor: 'yellow' | 'blue' | 'green' | 'pink' | 'white';
 }
+
+export interface CVDocument {
+  id: string;
+  title: string;
+  targetRole: string;
+  fileName: string;
+  fileUrl: string;
+  fileSize?: string;
+  uploadedAt: string;
+  isDefault?: boolean;
+  description?: string;
+  language?: string;
+}
+

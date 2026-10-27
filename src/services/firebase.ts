@@ -9,10 +9,11 @@ import {
   deleteDoc,
   type Firestore,
 } from 'firebase/firestore';
-import type { Project, SkillCategory, ExperienceItem } from '../types';
+import type { Project, SkillCategory, ExperienceItem, CVDocument } from '../types';
 import { PROJECTS as INITIAL_PROJECTS } from '../data/projects';
 import { SKILL_CATEGORIES as INITIAL_SKILLS } from '../data/skills';
 import { EXPERIENCES as INITIAL_EXPERIENCES } from '../data/experience';
+import { INITIAL_CVS } from '../data/cvs';
 
 export interface FirebaseConfig {
   apiKey: string;
@@ -109,6 +110,7 @@ const STORAGE_KEYS = {
   PROJECTS: 'neo_portfolio_projects',
   SKILLS: 'neo_portfolio_skills',
   EXPERIENCES: 'neo_portfolio_experiences',
+  CVS: 'neo_portfolio_cvs',
   PASSCODE: 'neo_admin_passcode',
 };
 
@@ -341,6 +343,98 @@ export const deleteExperienceDoc = async (id: string): Promise<void> => {
   localStorage.setItem(STORAGE_KEYS.EXPERIENCES, JSON.stringify(updated));
 };
 
+// --- CVS / RESUMES ---
+
+export const fetchCVs = async (): Promise<CVDocument[]> => {
+  const firestore = getDb();
+  if (firestore) {
+    try {
+      const snap = await getDocs(collection(firestore, 'cvs'));
+      if (!snap.empty) {
+        const list: CVDocument[] = [];
+        snap.forEach((d) => list.push({ ...(d.data() as CVDocument), id: d.id }));
+        return list;
+      }
+    } catch (err) {
+      console.warn('Firestore fetch failed for CVs:', err);
+    }
+  }
+
+  const local = localStorage.getItem(STORAGE_KEYS.CVS);
+  if (local) {
+    try {
+      return JSON.parse(local);
+    } catch {
+      // fallback
+    }
+  }
+
+  return INITIAL_CVS;
+};
+
+export const saveCVDoc = async (cv: CVDocument): Promise<void> => {
+  const firestore = getDb();
+  if (firestore) {
+    try {
+      await setDoc(doc(firestore, 'cvs', cv.id), cv, { merge: true });
+    } catch (err) {
+      console.error('Error saving CV to Firestore:', err);
+    }
+  }
+
+  const current = await fetchCVs();
+  // If this CV is marked as default, unmark others
+  let updatedList = current;
+  if (cv.isDefault) {
+    updatedList = updatedList.map((item) => ({
+      ...item,
+      isDefault: item.id === cv.id,
+    }));
+  }
+  const index = updatedList.findIndex((c) => c.id === cv.id);
+  const finalList = index >= 0 ? updatedList.map((c) => (c.id === cv.id ? cv : c)) : [cv, ...updatedList];
+  localStorage.setItem(STORAGE_KEYS.CVS, JSON.stringify(finalList));
+};
+
+export const deleteCVDoc = async (id: string): Promise<void> => {
+  const firestore = getDb();
+  if (firestore) {
+    try {
+      await deleteDoc(doc(firestore, 'cvs', id));
+    } catch (err) {
+      console.error('Error deleting CV from Firestore:', err);
+    }
+  }
+
+  const current = await fetchCVs();
+  const updated = current.filter((c) => c.id !== id);
+  // If the deleted one was default, set the first one as default if any remain
+  if (updated.length > 0 && !updated.some((c) => c.isDefault)) {
+    updated[0].isDefault = true;
+  }
+  localStorage.setItem(STORAGE_KEYS.CVS, JSON.stringify(updated));
+};
+
+export const setDefaultCVDoc = async (id: string): Promise<void> => {
+  const current = await fetchCVs();
+  const updated = current.map((c) => ({
+    ...c,
+    isDefault: c.id === id,
+  }));
+  localStorage.setItem(STORAGE_KEYS.CVS, JSON.stringify(updated));
+
+  const firestore = getDb();
+  if (firestore) {
+    try {
+      for (const cv of updated) {
+        await setDoc(doc(firestore, 'cvs', cv.id), { isDefault: cv.id === id }, { merge: true });
+      }
+    } catch (err) {
+      console.error('Error updating default CV in Firestore:', err);
+    }
+  }
+};
+
 // --- ONE-CLICK SEED TO FIRESTORE ---
 
 export const seedInitialDataToFirestore = async (): Promise<{ success: boolean; message: string }> => {
@@ -365,9 +459,13 @@ export const seedInitialDataToFirestore = async (): Promise<{ success: boolean; 
       await setDoc(doc(firestore, 'experience', exp.id), exp, { merge: true });
     }
 
+    for (const cv of INITIAL_CVS) {
+      await setDoc(doc(firestore, 'cvs', cv.id), cv, { merge: true });
+    }
+
     return {
       success: true,
-      message: 'Successfully seeded projects, skills, and experience into Firestore!',
+      message: 'Successfully seeded projects, skills, experience, and CVs into Firestore!',
     };
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : String(err);
@@ -377,3 +475,4 @@ export const seedInitialDataToFirestore = async (): Promise<{ success: boolean; 
     };
   }
 };
+

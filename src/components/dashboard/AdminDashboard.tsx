@@ -3,9 +3,11 @@ import { usePortfolio } from '../../context/PortfolioContext';
 import { BrutalCard } from '../BrutalCard';
 import { BrutalButton } from '../BrutalButton';
 import { ProjectFormModal } from './ProjectFormModal';
+import { ExperienceFormModal } from './ExperienceFormModal';
+import { CVUploadModal } from './CVUploadModal';
 import { FirebaseSettingsTab } from './FirebaseSettingsTab';
 import { ChangePasscodeCard } from './ChangePasscodeCard';
-import type { Project, SkillCategory, ExperienceItem } from '../../types';
+import type { Project, SkillCategory, ExperienceItem, CVDocument } from '../../types';
 import {
   FolderGit2,
   Terminal,
@@ -19,13 +21,21 @@ import {
   Unlock,
   KeyRound,
   ExternalLink,
+  FileText,
+  Download,
+  Star,
+  Eye,
+  Layers,
+  Calendar,
 } from 'lucide-react';
+
 
 export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => {
   const {
     projects,
     skills,
     experiences,
+    cvs,
     isFirebaseConnected,
     addProject,
     updateProject,
@@ -36,6 +46,9 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
     deleteSkillCategory,
     saveExperience,
     deleteExperience,
+    saveCV,
+    deleteCV,
+    setDefaultCV,
     verifyPasscode,
     updatePasscode,
     adminPasscode,
@@ -52,22 +65,23 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
   const [setupError, setSetupError] = useState('');
 
   // Active tab state
-  const [activeTab, setActiveTab] = useState<'projects' | 'skills' | 'experience' | 'security' | 'firebase'>('projects');
+  const [activeTab, setActiveTab] = useState<'projects' | 'skills' | 'experience' | 'cvs' | 'security' | 'firebase'>('projects');
 
   // Modals state
   const [projectModalOpen, setProjectModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+
+  const [experienceModalOpen, setExperienceModalOpen] = useState(false);
+  const [selectedExperience, setSelectedExperience] = useState<ExperienceItem | null>(null);
+
+  const [cvModalOpen, setCvModalOpen] = useState(false);
+  const [selectedCV, setSelectedCV] = useState<CVDocument | null>(null);
 
   // Skill category input states
   const [newSkillText, setNewSkillText] = useState<{ [categoryId: string]: string }>({});
   const [newCatTitle, setNewCatTitle] = useState('');
   const [newCatColor, setNewCatColor] = useState<'yellow' | 'blue' | 'green' | 'pink'>('yellow');
 
-  // Experience modal/edit state
-  const [newExpRole, setNewExpRole] = useState('');
-  const [newExpCompany, setNewExpCompany] = useState('');
-  const [newExpPeriod, setNewExpPeriod] = useState('');
-  const [newExpDesc, setNewExpDesc] = useState('');
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,30 +136,6 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
     setNewCatTitle('');
   };
 
-  // --- Experience Handler ---
-  const handleAddExperience = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newExpRole || !newExpCompany) return;
-    const newExp: ExperienceItem = {
-      id: `exp-${Date.now()}`,
-      role: newExpRole,
-      company: newExpCompany,
-      period: newExpPeriod || 'Present',
-      type: 'Full-time / Internship',
-      location: 'Phnom Penh, Cambodia',
-      description: newExpDesc || 'Engineered scalable backend solutions.',
-      responsibilities: [
-        'Built and maintained backend services and REST APIs.',
-        'Collaborated on database architecture and enterprise workflows.',
-      ],
-      technologies: ['Java', 'Spring Boot', 'SQL'],
-    };
-    saveExperience(newExp);
-    setNewExpRole('');
-    setNewExpCompany('');
-    setNewExpPeriod('');
-    setNewExpDesc('');
-  };
 
   /* ==============================================================
      UNAUTHENTICATED GATE: PASSCODE PROTECTION
@@ -380,6 +370,19 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
           >
             <Briefcase className="w-4 h-4" />
             <span>EXPERIENCE ({experiences.length})</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('cvs')}
+            className={`px-4 py-2 border-[2.5px] border-[#111111] font-mono text-xs md:text-sm font-black uppercase tracking-wider transition-all cursor-pointer shadow-[3px_3px_0px_#111111] flex items-center gap-2 ${
+              activeTab === 'cvs'
+                ? 'bg-[#111111] text-[#F5F0E8] -translate-y-0.5'
+                : 'bg-white text-[#111111] hover:bg-[#FFD84D]'
+            }`}
+          >
+            <FileText className="w-4 h-4 text-[#4D7CFE]" />
+            <span>CV / RESUMES ({cvs.length})</span>
           </button>
 
           <button
@@ -645,14 +648,29 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
            TAB 3: EXPERIENCE
            ============================================================== */}
         {activeTab === 'experience' && (
-          <div className="space-y-8">
-            <div>
-              <h3 className="text-2xl font-black uppercase text-[#111111]">
-                PROFESSIONAL EXPERIENCE
-              </h3>
-              <p className="font-mono text-xs text-[#111111]/70 font-semibold">
-                Manage work history, internships, and company roles.
-              </p>
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-2xl font-black uppercase text-[#111111]">
+                  PROFESSIONAL EXPERIENCE
+                </h3>
+                <p className="font-mono text-xs text-[#111111]/70 font-semibold">
+                  Add, update, or remove work history, internships, and company roles.
+                </p>
+              </div>
+
+              <BrutalButton
+                variant="yellow"
+                size="md"
+                onClick={() => {
+                  setSelectedExperience(null);
+                  setExperienceModalOpen(true);
+                }}
+                icon={<Plus className="w-4 h-4" />}
+                iconPosition="left"
+              >
+                ADD NEW EXPERIENCE
+              </BrutalButton>
             </div>
 
             <div className="space-y-4">
@@ -660,25 +678,47 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
                 <BrutalCard key={exp.id} variant="white" shadow="md" borderThick className="p-6">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b-2 border-[#111111] mb-3 gap-2">
                     <div>
-                      <h4 className="text-xl font-black uppercase text-[#111111]">
-                        {exp.role} — <span className="text-[#4D7CFE]">{exp.company}</span>
-                      </h4>
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <h4 className="text-xl font-black uppercase text-[#111111]">
+                          {exp.role} — <span className="text-[#4D7CFE]">{exp.company}</span>
+                        </h4>
+                        {exp.statusBadge && (
+                          <span className="font-mono text-[10px] font-black uppercase bg-[#FFD84D] px-2 py-0.5 border border-[#111111] shadow-[1px_1px_0px_#111111]">
+                            {exp.statusBadge}
+                          </span>
+                        )}
+                      </div>
                       <p className="font-mono text-xs font-bold text-gray-600">
-                        {exp.period} | {exp.location}
+                        {exp.period} | {exp.location} | <span className="uppercase">{exp.type}</span>
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (confirm(`Delete experience entry for ${exp.company}?`)) {
-                          deleteExperience(exp.id);
-                        }
-                      }}
-                      className="p-1.5 border-2 border-[#111111] bg-white hover:bg-red-500 hover:text-white transition-colors cursor-pointer self-start sm:self-center"
-                      title="Delete experience"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+
+                    <div className="flex items-center gap-2 self-start sm:self-center">
+                      <BrutalButton
+                        variant="white"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedExperience(exp);
+                          setExperienceModalOpen(true);
+                        }}
+                        icon={<Edit3 className="w-3.5 h-3.5" />}
+                        iconPosition="left"
+                      >
+                        EDIT
+                      </BrutalButton>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm(`Delete experience entry for "${exp.company}"?`)) {
+                            deleteExperience(exp.id);
+                          }
+                        }}
+                        className="p-1.5 border-2 border-[#111111] bg-white hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
+                        title="Delete experience"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
 
                   <p className="font-sans text-xs md:text-sm text-[#111111]/85 mb-3 font-medium">
@@ -687,11 +727,14 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
 
                   <div className="bg-[#F5F0E8] border border-[#111111] p-3 mb-3">
                     <span className="font-mono text-[11px] font-black uppercase text-gray-600 block mb-1">
-                      Responsibilities:
+                      Responsibilities ({exp.responsibilities.length}):
                     </span>
                     <ul className="space-y-1 font-mono text-xs text-[#111111]">
                       {exp.responsibilities.map((r, idx) => (
-                        <li key={idx}>▸ {r}</li>
+                        <li key={idx} className="flex items-start gap-1.5">
+                          <span className="text-[#4D7CFE] font-black leading-none">▪</span>
+                          <span>{r}</span>
+                        </li>
                       ))}
                     </ul>
                   </div>
@@ -700,7 +743,7 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
                     {exp.technologies.map((t) => (
                       <span
                         key={t}
-                        className="px-2 py-0.5 border border-[#111111] bg-white font-mono text-[11px] font-bold"
+                        className="px-2 py-0.5 border border-[#111111] bg-white font-mono text-[11px] font-bold shadow-[1px_1px_0px_#111111]"
                       >
                         {t}
                       </span>
@@ -709,60 +752,175 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
                 </BrutalCard>
               ))}
             </div>
-
-            {/* Quick Add Experience Form */}
-            <BrutalCard variant="cream" shadow="md" borderThick className="p-6">
-              <h4 className="font-mono text-sm font-black uppercase text-[#111111] mb-4">
-                ADD NEW WORK EXPERIENCE
-              </h4>
-              <form onSubmit={handleAddExperience} className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <input
-                    type="text"
-                    required
-                    value={newExpRole}
-                    onChange={(e) => setNewExpRole(e.target.value)}
-                    placeholder="Role (e.g. Backend Developer)"
-                    className="border-2 border-[#111111] p-2 font-mono text-xs bg-white"
-                  />
-                  <input
-                    type="text"
-                    required
-                    value={newExpCompany}
-                    onChange={(e) => setNewExpCompany(e.target.value)}
-                    placeholder="Company (e.g. LOLC Bank)"
-                    className="border-2 border-[#111111] p-2 font-mono text-xs bg-white"
-                  />
-                  <input
-                    type="text"
-                    value={newExpPeriod}
-                    onChange={(e) => setNewExpPeriod(e.target.value)}
-                    placeholder="Period (e.g. 2024 - Present)"
-                    className="border-2 border-[#111111] p-2 font-mono text-xs bg-white"
-                  />
-                </div>
-                <textarea
-                  rows={2}
-                  value={newExpDesc}
-                  onChange={(e) => setNewExpDesc(e.target.value)}
-                  placeholder="Overview of responsibilities..."
-                  className="w-full border-2 border-[#111111] p-2 font-mono text-xs bg-white"
-                />
-                <BrutalButton variant="yellow" size="sm" type="submit">
-                  + ADD EXPERIENCE RECORD
-                </BrutalButton>
-              </form>
-            </BrutalCard>
           </div>
         )}
 
         {/* ==============================================================
-           TAB 4: SECURITY & PASSCODE
+           TAB 4: CV / RESUME MANAGER (MULTI-CV)
+           ============================================================== */}
+        {activeTab === 'cvs' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-2xl font-black uppercase text-[#111111]">
+                  CURRICULUM VITAE (MULTI-CV) MANAGER
+                </h3>
+                <p className="font-mono text-xs text-[#111111]/70 font-semibold">
+                  Upload multiple CV variants so HR and hiring managers can select the technical resume they need.
+                </p>
+              </div>
+
+              <BrutalButton
+                variant="yellow"
+                size="md"
+                onClick={() => {
+                  setSelectedCV(null);
+                  setCvModalOpen(true);
+                }}
+                icon={<Plus className="w-4 h-4" />}
+                iconPosition="left"
+              >
+                UPLOAD NEW CV
+              </BrutalButton>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {cvs.map((cv) => (
+                <BrutalCard
+                  key={cv.id}
+                  variant="white"
+                  shadow="md"
+                  borderThick
+                  className={`p-6 flex flex-col justify-between ${
+                    cv.isDefault ? 'border-2 border-[#111111] ring-2 ring-[#FFD84D]' : ''
+                  }`}
+                >
+                  <div>
+                    {/* Header Badges */}
+                    <div className="flex items-center justify-between pb-3 border-b-2 border-[#111111] mb-3">
+                      <span className="font-mono text-xs font-black uppercase bg-[#F5F0E8] px-2 py-0.5 border border-[#111111]">
+                        {cv.language || 'English'}
+                      </span>
+                      {cv.isDefault ? (
+                        <span className="font-mono text-xs font-black bg-[#FFD84D] px-2 py-0.5 border border-[#111111] shadow-[2px_2px_0px_#111111] flex items-center gap-1">
+                          <Star className="w-3.5 h-3.5 fill-[#111111]" />
+                          DEFAULT / PRIMARY
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setDefaultCV(cv.id)}
+                          className="font-mono text-[11px] font-bold text-gray-500 hover:text-black hover:underline cursor-pointer"
+                        >
+                          Make Default
+                        </button>
+                      )}
+                    </div>
+
+                    <h4 className="text-xl font-black uppercase text-[#111111] mb-1">
+                      {cv.title}
+                    </h4>
+
+                    <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-[#4D7CFE] font-bold uppercase mb-3">
+                      <span className="flex items-center gap-1">
+                        <Layers className="w-3.5 h-3.5" />
+                        {cv.targetRole}
+                      </span>
+                      <span>•</span>
+                      <span className="text-gray-600 flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5" />
+                        {cv.uploadedAt}
+                      </span>
+                    </div>
+
+                    {cv.description && (
+                      <p className="font-sans text-xs md:text-sm text-[#111111]/80 font-medium mb-4 leading-relaxed bg-[#F5F0E8] p-3 border border-[#111111]">
+                        {cv.description}
+                      </p>
+                    )}
+
+                    <div className="flex items-center justify-between font-mono text-[11px] text-gray-700 pb-3">
+                      <span className="truncate max-w-[180px]">
+                        File: <strong>{cv.fileName}</strong>
+                      </span>
+                      <span className="bg-[#B7F34A] border border-[#111111] px-1.5 py-0.5 font-bold">
+                        {cv.fileSize || 'PDF'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="pt-4 border-t-2 border-[#111111] flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const link = document.createElement('a');
+                          link.href = cv.fileUrl;
+                          link.download = cv.fileName || 'CV.pdf';
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }}
+                        className="px-2.5 py-1 border-2 border-[#111111] bg-[#FFD84D] hover:bg-[#111111] hover:text-white font-mono text-xs font-bold uppercase transition-colors flex items-center gap-1 cursor-pointer"
+                        title="Download / test file"
+                      >
+                        <Download className="w-3 h-3" />
+                        <span>Test</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => window.open(cv.fileUrl, '_blank')}
+                        className="px-2.5 py-1 border-2 border-[#111111] bg-white hover:bg-[#F5F0E8] font-mono text-xs font-bold uppercase transition-colors flex items-center gap-1 cursor-pointer"
+                        title="Preview in new tab"
+                      >
+                        <Eye className="w-3 h-3" />
+                        <span>View</span>
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <BrutalButton
+                        variant="white"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCV(cv);
+                          setCvModalOpen(true);
+                        }}
+                        icon={<Edit3 className="w-3.5 h-3.5" />}
+                        iconPosition="left"
+                      >
+                        EDIT
+                      </BrutalButton>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (confirm(`Delete CV document "${cv.title}"?`)) {
+                            deleteCV(cv.id);
+                          }
+                        }}
+                        className="p-1.5 border-2 border-[#111111] bg-white hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
+                        title="Delete CV"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </BrutalCard>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ==============================================================
+           TAB 5: SECURITY & PASSCODE
            ============================================================== */}
         {activeTab === 'security' && <ChangePasscodeCard />}
 
         {/* ==============================================================
-           TAB 5: FIREBASE SETTINGS & SYNC
+           TAB 6: FIREBASE SETTINGS & SYNC
            ============================================================== */}
         {activeTab === 'firebase' && <FirebaseSettingsTab />}
       </div>
@@ -780,6 +938,27 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
           }
         }}
       />
+
+      {/* Modal for adding/editing experience */}
+      <ExperienceFormModal
+        isOpen={experienceModalOpen}
+        experience={selectedExperience}
+        onClose={() => setExperienceModalOpen(false)}
+        onSave={async (exp) => {
+          await saveExperience(exp);
+        }}
+      />
+
+      {/* Modal for uploading/editing multi-CV */}
+      <CVUploadModal
+        isOpen={cvModalOpen}
+        cv={selectedCV}
+        onClose={() => setCvModalOpen(false)}
+        onSave={async (cvDoc) => {
+          await saveCV(cvDoc);
+        }}
+      />
     </div>
   );
 };
+

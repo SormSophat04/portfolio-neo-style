@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
-import type { Project, SkillCategory, ExperienceItem } from '../types';
+import type { Project, SkillCategory, ExperienceItem, CVDocument } from '../types';
 import {
   fetchProjects,
   saveProjectDoc,
@@ -10,6 +10,10 @@ import {
   fetchExperiences,
   saveExperienceDoc,
   deleteExperienceDoc,
+  fetchCVs,
+  saveCVDoc,
+  deleteCVDoc,
+  setDefaultCVDoc,
   getStoredFirebaseConfig,
   saveFirebaseConfig,
   clearFirebaseConfig,
@@ -24,6 +28,7 @@ interface PortfolioContextType {
   projects: Project[];
   skills: SkillCategory[];
   experiences: ExperienceItem[];
+  cvs: CVDocument[];
   loading: boolean;
   isFirebaseConnected: boolean;
   firebaseConfig: FirebaseConfig | null;
@@ -39,6 +44,9 @@ interface PortfolioContextType {
   deleteSkillCategory: (id: string) => Promise<void>;
   saveExperience: (experience: ExperienceItem) => Promise<void>;
   deleteExperience: (id: string) => Promise<void>;
+  saveCV: (cv: CVDocument) => Promise<void>;
+  deleteCV: (id: string) => Promise<void>;
+  setDefaultCV: (id: string) => Promise<void>;
   seedFirestore: () => Promise<{ success: boolean; message: string }>;
   reloadAll: () => Promise<void>;
   updatePasscode: (newPasscode: string) => Promise<void>;
@@ -51,6 +59,7 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [projects, setProjects] = useState<Project[]>([]);
   const [skills, setSkills] = useState<SkillCategory[]>([]);
   const [experiences, setExperiences] = useState<ExperienceItem[]>([]);
+  const [cvs, setCvs] = useState<CVDocument[]>([]);
   const [adminPasscode, setAdminPasscode] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [firebaseConfig, setFirebaseConfig] = useState<FirebaseConfig | null>(null);
@@ -64,15 +73,17 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const { db } = initFirebase(config || undefined);
       setIsFirebaseConnected(!!db);
 
-      const [p, s, e, pass] = await Promise.all([
+      const [p, s, e, c, pass] = await Promise.all([
         fetchProjects(),
         fetchSkills(),
         fetchExperiences(),
+        fetchCVs(),
         fetchAdminPasscode(),
       ]);
       setProjects(p);
       setSkills(s);
       setExperiences(e);
+      setCvs(c);
       setAdminPasscode(pass);
     } catch (err) {
       console.error('Error loading portfolio data:', err);
@@ -167,6 +178,39 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setExperiences((prev) => prev.filter((e) => e.id !== id));
   };
 
+  const saveCV = async (cv: CVDocument) => {
+    await saveCVDoc(cv);
+    setCvs((prev) => {
+      let updated = prev;
+      if (cv.isDefault) {
+        updated = updated.map((item) => ({ ...item, isDefault: item.id === cv.id }));
+      }
+      const idx = updated.findIndex((c) => c.id === cv.id);
+      return idx >= 0 ? updated.map((c) => (c.id === cv.id ? cv : c)) : [cv, ...updated];
+    });
+  };
+
+  const deleteCV = async (id: string) => {
+    await deleteCVDoc(id);
+    setCvs((prev) => {
+      const remaining = prev.filter((c) => c.id !== id);
+      if (remaining.length > 0 && !remaining.some((c) => c.isDefault)) {
+        remaining[0].isDefault = true;
+      }
+      return remaining;
+    });
+  };
+
+  const setDefaultCV = async (id: string) => {
+    await setDefaultCVDoc(id);
+    setCvs((prev) =>
+      prev.map((c) => ({
+        ...c,
+        isDefault: c.id === id,
+      }))
+    );
+  };
+
   const seedFirestore = async () => {
     const result = await seedInitialDataToFirestore();
     if (result.success) {
@@ -195,6 +239,7 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         projects,
         skills,
         experiences,
+        cvs,
         loading,
         isFirebaseConnected,
         firebaseConfig,
@@ -210,6 +255,9 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         deleteSkillCategory,
         saveExperience,
         deleteExperience,
+        saveCV,
+        deleteCV,
+        setDefaultCV,
         seedFirestore,
         reloadAll: loadData,
         updatePasscode,
