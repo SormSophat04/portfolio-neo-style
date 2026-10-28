@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrowUp, Heart, Terminal, Mail } from 'lucide-react';
 import { BrutalButton } from './BrutalButton';
-import { GitHubIcon, LinkedInIcon } from './Icons';
+import { GitHubIcon, LinkedInIcon, TelegramIcon } from './Icons';
 
 export const Footer: React.FC = () => {
   const scrollToTop = () => {
@@ -82,29 +82,38 @@ export const Footer: React.FC = () => {
             </h4>
             <div className="flex flex-col gap-2.5 font-mono text-xs">
               <a
+                href="https://t.me/sormsophat04"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 text-white hover:text-[#229ED9] transition-colors"
+              >
+                <TelegramIcon className="w-4 h-4 text-[#229ED9]" />
+                <span>t.me/sormsophat04</span>
+              </a>
+              <a
+                href="mailto:sophatsorm2023@gmail.com"
+                className="inline-flex items-center gap-2 text-white hover:text-[#FFD84D] transition-colors"
+              >
+                <Mail className="w-4 h-4 text-[#FFD84D]" />
+                <span>sophatsorm2023@gmail.com</span>
+              </a>
+              <a
                 href="https://github.com/SormSophat04"
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 text-white hover:text-[#FFD84D] transition-colors"
               >
-                <GitHubIcon className="w-4 h-4" />
+                <GitHubIcon className="w-4 h-4 text-[#4D7CFE]" />
                 <span>github.com/SormSophat04</span>
               </a>
               <a
-                href="mailto:contact@sormsophat.dev"
-                className="inline-flex items-center gap-2 text-white hover:text-[#FFD84D] transition-colors"
-              >
-                <Mail className="w-4 h-4" />
-                <span>contact@sormsophat.dev [Placeholder]</span>
-              </a>
-              <a
-                href="https://linkedin.com/in/sorm-sophat"
+                href="https://www.linkedin.com/in/sorm-sophat-6b70a03ba"
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-2 text-white hover:text-[#FFD84D] transition-colors"
+                className="inline-flex items-center gap-2 text-white hover:text-[#B7F34A] transition-colors"
               >
-                <LinkedInIcon className="w-4 h-4" />
-                <span>linkedin.com/in/sorm-sophat [Placeholder]</span>
+                <LinkedInIcon className="w-4 h-4 text-[#B7F34A]" />
+                <span>linkedin.com/in/sorm-sophat</span>
               </a>
             </div>
           </div>

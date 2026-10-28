@@ -435,6 +435,38 @@ export const setDefaultCVDoc = async (id: string): Promise<void> => {
   }
 };
 
+// --- TRANSMISSIONS / CONTACT MESSAGES ---
+
+export interface ContactMessageDoc {
+  id?: string;
+  name: string;
+  email: string;
+  subject?: string;
+  message: string;
+  createdAt: string;
+}
+
+export const saveTransmissionDoc = async (messageData: {
+  name: string;
+  email: string;
+  subject?: string;
+  message: string;
+}): Promise<void> => {
+  const firestore = getDb();
+  if (firestore) {
+    try {
+      const colRef = collection(firestore, 'transmissions');
+      const docRef = doc(colRef);
+      await setDoc(docRef, {
+        ...messageData,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (err) {
+      console.warn('Could not save transmission to Firestore:', err);
+    }
+  }
+};
+
 // --- ONE-CLICK SEED TO FIRESTORE ---
 
 export const seedInitialDataToFirestore = async (): Promise<{ success: boolean; message: string }> => {
