@@ -13,7 +13,8 @@ const escapeHtml = (text: string): string => {
 };
 
 export const sendTelegramTransmission = async (
-  transmission: ContactTransmission
+  transmission: ContactTransmission,
+  transmissionId?: string
 ): Promise<{ success: boolean; error?: string }> => {
   const botToken =
     import.meta.env.VITE_TELEGRAM_BOT_TOKEN ||
@@ -50,6 +51,29 @@ export const sendTelegramTransmission = async (
     `⚡ <i>Delivered via Sophat Portfolio Neo-Terminal</i>`,
   ].join('\n');
 
+  const requestBody: Record<string, unknown> = {
+    chat_id: chatId,
+    text: formattedMessage,
+    parse_mode: 'HTML',
+  };
+
+  if (transmissionId) {
+    requestBody.reply_markup = {
+      inline_keyboard: [
+        [
+          {
+            text: '✅ APPROVE & EMAIL HR',
+            callback_data: `approve:${transmissionId}`,
+          },
+          {
+            text: '❌ REJECT & EMAIL HR',
+            callback_data: `reject:${transmissionId}`,
+          },
+        ],
+      ],
+    };
+  }
+
   try {
     const response = await fetch(
       `https://api.telegram.org/bot${botToken}/sendMessage`,
@@ -58,11 +82,7 @@ export const sendTelegramTransmission = async (
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          chat_id: chatId,
-          text: formattedMessage,
-          parse_mode: 'HTML',
-        }),
+        body: JSON.stringify(requestBody),
       }
     );
 

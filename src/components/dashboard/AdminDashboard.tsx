@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePortfolio } from '../../context/PortfolioContext';
 import { BrutalCard } from '../BrutalCard';
 import { BrutalButton } from '../BrutalButton';
@@ -27,8 +27,18 @@ import {
   Eye,
   Layers,
   Calendar,
+  Loader2,
+  ShieldAlert,
 } from 'lucide-react';
-
+import {
+  isSessionValid,
+  createAdminSession,
+  clearAdminSession,
+  purgeInsecureStorage,
+  checkRateLimit,
+  recordFailedAttempt,
+  resetRateLimit,
+} from '../../services/security';
 
 export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => {
   const {
@@ -51,18 +61,41 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
     setDefaultCV,
     verifyPasscode,
     updatePasscode,
-    adminPasscode,
+    isPasscodeConfigured,
   } = usePortfolio();
 
   // Authentication gate state
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('neo_admin_auth') === 'true';
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => isSessionValid());
+  const [isVerifying, setIsVerifying] = useState(false);
   const [passcode, setPasscode] = useState('');
   const [authError, setAuthError] = useState(false);
   const [initialPasscode, setInitialPasscode] = useState('');
   const [confirmInitialPasscode, setConfirmInitialPasscode] = useState('');
   const [setupError, setSetupError] = useState('');
+  const [hasPasscode, setHasPasscode] = useState<boolean | null>(null);
+  const [rateLimit, setRateLimit] = useState<{ isLocked: boolean; remainingSeconds: number }>(() =>
+    checkRateLimit()
+  );
+
+  useEffect(() => {
+    purgeInsecureStorage();
+    isPasscodeConfigured().then((configured) => {
+      setHasPasscode(configured);
+    });
+  }, [isPasscodeConfigured]);
+
+  useEffect(() => {
+    if (!rateLimit.isLocked || rateLimit.remainingSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setRateLimit((prev) => {
+        if (prev.remainingSeconds <= 1) {
+          return { isLocked: false, remainingSeconds: 0 };
+        }
+        return { isLocked: true, remainingSeconds: prev.remainingSeconds - 1 };
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [rateLimit.isLocked, rateLimit.remainingSeconds]);
 
   // Active tab state
   const [activeTab, setActiveTab] = useState<'projects' | 'skills' | 'experience' | 'cvs' | 'security' | 'firebase'>('projects');
@@ -83,21 +116,36 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
   const [newCatColor, setNewCatColor] = useState<'yellow' | 'blue' | 'green' | 'pink'>('yellow');
 
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (verifyPasscode(passcode)) {
-      setIsAuthenticated(true);
-      localStorage.setItem('neo_admin_auth', 'true');
-      setAuthError(false);
-    } else {
+    if (rateLimit.isLocked || isVerifying) return;
+    setIsVerifying(true);
+    setAuthError(false);
+
+    try {
+      const isValid = await verifyPasscode(passcode);
+      if (isValid) {
+        resetRateLimit();
+        createAdminSession();
+        setIsAuthenticated(true);
+        setAuthError(false);
+        setPasscode('');
+      } else {
+        const failure = recordFailedAttempt();
+        setRateLimit({ isLocked: failure.isLocked, remainingSeconds: failure.remainingSeconds });
+        setAuthError(true);
+      }
+    } catch {
       setAuthError(true);
+    } finally {
+      setIsVerifying(false);
     }
   };
 
   const handleInitialSetup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (initialPasscode.length < 4) {
-      setSetupError('Passcode must be at least 4 characters long.');
+    if (initialPasscode.length < 6) {
+      setSetupError('Passcode must be at least 6 characters long.');
       return;
     }
     if (initialPasscode !== confirmInitialPasscode) {
@@ -105,13 +153,15 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
       return;
     }
     await updatePasscode(initialPasscode);
+    resetRateLimit();
+    createAdminSession();
     setIsAuthenticated(true);
-    localStorage.setItem('neo_admin_auth', 'true');
+    setHasPasscode(true);
   };
 
   const handleLogout = () => {
+    clearAdminSession();
     setIsAuthenticated(false);
-    localStorage.removeItem('neo_admin_auth');
   };
 
   // --- Skill Handlers ---
@@ -168,7 +218,7 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
             Enter passcode to manage portfolio records, skills, and Firestore cloud synchronization.
           </p>
 
-          {!adminPasscode ? (
+          {hasPasscode === false ? (
             <form onSubmit={handleInitialSetup} className="space-y-4">
               <div className="p-3 bg-[#FFD84D]/30 border-2 border-[#111111] font-mono text-xs font-bold text-[#111111]">
                 No admin passcode is configured in Firebase. Create your initial passcode below.
@@ -182,7 +232,7 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
                   required
                   value={initialPasscode}
                   onChange={(e) => setInitialPasscode(e.target.value)}
-                  placeholder="Create passcode (min. 4 chars)"
+                  placeholder="Create passcode (min. 6 chars)"
                   className="w-full border-2 border-[#111111] p-2.5 font-mono text-sm bg-[#F5F0E8] focus:bg-white focus:outline-none shadow-[2px_2px_0px_#111111]"
                 />
               </div>
@@ -217,6 +267,16 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
             </form>
           ) : (
             <form onSubmit={handleLogin} className="space-y-4">
+              {rateLimit.isLocked && (
+                <div className="p-3 border-2 border-[#111111] bg-[#FF4D4D] text-white font-mono text-xs font-bold flex items-start gap-2 shadow-[2px_2px_0px_#111111]">
+                  <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-yellow-300" />
+                  <div>
+                    <span className="block uppercase font-black">RATE LIMIT EXCEEDED</span>
+                    <span>Too many failed attempts. Locked out for {rateLimit.remainingSeconds}s.</span>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block font-mono text-xs font-black uppercase mb-1">
                   ADMIN PASSCODE *
@@ -224,14 +284,16 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
                 <input
                   type="password"
                   required
+                  disabled={rateLimit.isLocked || isVerifying}
                   value={passcode}
                   onChange={(e) => setPasscode(e.target.value)}
                   placeholder="Enter admin passcode"
-                  className="w-full border-2 border-[#111111] p-2.5 font-mono text-sm bg-[#F5F0E8] focus:bg-white focus:outline-none shadow-[2px_2px_0px_#111111]"
+                  className="w-full border-2 border-[#111111] p-2.5 font-mono text-sm bg-[#F5F0E8] focus:bg-white focus:outline-none shadow-[2px_2px_0px_#111111] disabled:opacity-50"
                 />
-                {authError && (
-                  <p className="font-mono text-xs font-bold text-red-600 mt-1">
-                    Incorrect passcode. Please try again.
+                {authError && !rateLimit.isLocked && (
+                  <p className="font-mono text-xs font-bold text-red-600 mt-1.5 flex items-center gap-1">
+                    <span>✕</span>
+                    <span>Incorrect passcode. Attempts are logged & rate-limited.</span>
                   </p>
                 )}
               </div>
@@ -240,11 +302,18 @@ export const AdminDashboard: React.FC<{ onExit: () => void }> = ({ onExit }) => 
                 variant="yellow"
                 size="md"
                 type="submit"
-                icon={<Unlock className="w-4 h-4" />}
+                disabled={rateLimit.isLocked || isVerifying || !passcode}
+                icon={
+                  isVerifying ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Unlock className="w-4 h-4" />
+                  )
+                }
                 iconPosition="right"
                 className="w-full"
               >
-                AUTHENTICATE ACCESS
+                {isVerifying ? 'VERIFYING...' : 'AUTHENTICATE ACCESS'}
               </BrutalButton>
             </form>
           )}

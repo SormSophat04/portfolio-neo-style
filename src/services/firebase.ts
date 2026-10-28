@@ -106,57 +106,66 @@ export const getDb = (): Firestore | null => {
    DATA REPOSITORY: FIRESTORE WITH SEAMLESS LOCALSTORAGE FALLBACK
    ============================================================== */
 
+import { hashPasscode, purgeInsecureStorage } from './security';
+
 const STORAGE_KEYS = {
   PROJECTS: 'neo_portfolio_projects',
   SKILLS: 'neo_portfolio_skills',
   EXPERIENCES: 'neo_portfolio_experiences',
   CVS: 'neo_portfolio_cvs',
-  PASSCODE: 'neo_admin_passcode',
 };
 
-// --- PASSCODE / AUTH PERSISTENCE (PURE CLOUD FIRESTORE) ---
+// --- PASSCODE / AUTH PERSISTENCE (PURE CLOUD FIRESTORE WITH SHA-256 HASH) ---
 
-export const fetchAdminPasscode = async (): Promise<string> => {
+export const fetchAdminPasscodeHash = async (): Promise<string> => {
+  purgeInsecureStorage();
   const firestore = getDb();
   if (firestore) {
     try {
       const snap = await getDoc(doc(firestore, 'settings', 'admin'));
-      if (snap.exists() && snap.data()?.passcode) {
-        const cloudPasscode = snap.data().passcode;
-        localStorage.setItem(STORAGE_KEYS.PASSCODE, cloudPasscode);
-        return cloudPasscode;
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data?.passcodeHash) {
+          return data.passcodeHash;
+        }
+        // Auto-migrate legacy plaintext passcode to salted SHA-256 hash
+        if (data?.passcode) {
+          const newHash = await hashPasscode(data.passcode);
+          await setDoc(
+            doc(firestore, 'settings', 'admin'),
+            { passcodeHash: newHash, updatedAt: new Date().toISOString() }
+          );
+          return newHash;
+        }
       }
     } catch (err) {
-      console.warn('Could not fetch passcode from Firestore, using local fallback:', err);
+      console.warn('Could not fetch passcode hash from Firestore:', err);
     }
-  }
-
-  const local = localStorage.getItem(STORAGE_KEYS.PASSCODE);
-  if (local) {
-    return local;
   }
 
   return '';
 };
 
-export const saveAdminPasscode = async (newPasscode: string): Promise<void> => {
-  const trimmed = newPasscode.trim();
-  if (!trimmed) return;
-
+export const saveAdminPasscodeHash = async (newHash: string): Promise<void> => {
+  purgeInsecureStorage();
   const firestore = getDb();
   if (firestore) {
     try {
       await setDoc(
         doc(firestore, 'settings', 'admin'),
-        { passcode: trimmed, updatedAt: new Date().toISOString() },
-        { merge: true }
+        { passcodeHash: newHash, updatedAt: new Date().toISOString() }
       );
     } catch (err) {
-      console.error('Error saving passcode to Firestore:', err);
+      console.error('Error saving passcode hash to Firestore:', err);
     }
   }
+};
 
-  localStorage.setItem(STORAGE_KEYS.PASSCODE, trimmed);
+export const fetchAdminPasscode = fetchAdminPasscodeHash;
+
+export const saveAdminPasscode = async (newPasscode: string): Promise<void> => {
+  const hash = await hashPasscode(newPasscode);
+  await saveAdminPasscodeHash(hash);
 };
 
 // --- PROJECTS ---
@@ -451,7 +460,8 @@ export const saveTransmissionDoc = async (messageData: {
   email: string;
   subject?: string;
   message: string;
-}): Promise<void> => {
+}): Promise<string> => {
+  const fallbackId = 'trans_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
   const firestore = getDb();
   if (firestore) {
     try {
@@ -459,12 +469,26 @@ export const saveTransmissionDoc = async (messageData: {
       const docRef = doc(colRef);
       await setDoc(docRef, {
         ...messageData,
+        status: 'pending',
         createdAt: new Date().toISOString(),
       });
+      return docRef.id;
     } catch (err) {
       console.warn('Could not save transmission to Firestore:', err);
     }
   }
+
+  // Fallback cache
+  try {
+    localStorage.setItem(
+      'neo_transmission_' + fallbackId,
+      JSON.stringify({ ...messageData, status: 'pending', createdAt: new Date().toISOString() })
+    );
+  } catch {
+    // ignore
+  }
+
+  return fallbackId;
 };
 
 // --- ONE-CLICK SEED TO FIRESTORE ---

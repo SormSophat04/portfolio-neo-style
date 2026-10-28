@@ -52,13 +52,11 @@ export const Contact: React.FC = () => {
     };
 
     try {
-      // 1. Dispatch transmission to Telegram
-      const telegramResult = await sendTelegramTransmission(payload);
+      // 1. Save transmission to Firestore to get the unique transmission ID
+      const transmissionId = await saveTransmissionDoc(payload);
 
-      // 2. Also back up to Firestore (if available)
-      saveTransmissionDoc(payload).catch((err) =>
-        console.warn('Firestore backup note:', err)
-      );
+      // 2. Dispatch transmission with interactive Approve/Reject buttons to Telegram
+      const telegramResult = await sendTelegramTransmission(payload, transmissionId);
 
       if (!telegramResult.success) {
         setSubmitError(

@@ -19,10 +19,11 @@ import {
   clearFirebaseConfig,
   initFirebase,
   seedInitialDataToFirestore,
-  fetchAdminPasscode,
-  saveAdminPasscode,
+  fetchAdminPasscodeHash,
+  saveAdminPasscodeHash,
   type FirebaseConfig,
 } from '../services/firebase';
+import { hashPasscode, purgeInsecureStorage } from '../services/security';
 
 interface PortfolioContextType {
   projects: Project[];
@@ -49,8 +50,9 @@ interface PortfolioContextType {
   setDefaultCV: (id: string) => Promise<void>;
   seedFirestore: () => Promise<{ success: boolean; message: string }>;
   reloadAll: () => Promise<void>;
+  isPasscodeConfigured: () => Promise<boolean>;
   updatePasscode: (newPasscode: string) => Promise<void>;
-  verifyPasscode: (candidate: string) => boolean;
+  verifyPasscode: (candidate: string) => Promise<boolean>;
 }
 
 export const PortfolioContext = createContext<PortfolioContextType | undefined>(undefined);
@@ -60,31 +62,29 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [skills, setSkills] = useState<SkillCategory[]>([]);
   const [experiences, setExperiences] = useState<ExperienceItem[]>([]);
   const [cvs, setCvs] = useState<CVDocument[]>([]);
-  const [adminPasscode, setAdminPasscode] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [firebaseConfig, setFirebaseConfig] = useState<FirebaseConfig | null>(null);
   const [isFirebaseConnected, setIsFirebaseConnected] = useState<boolean>(false);
 
   const loadData = async () => {
     setLoading(true);
+    purgeInsecureStorage();
     try {
       const config = getStoredFirebaseConfig();
       setFirebaseConfig(config);
       const { db } = initFirebase(config || undefined);
       setIsFirebaseConnected(!!db);
 
-      const [p, s, e, c, pass] = await Promise.all([
+      const [p, s, e, c] = await Promise.all([
         fetchProjects(),
         fetchSkills(),
         fetchExperiences(),
         fetchCVs(),
-        fetchAdminPasscode(),
       ]);
       setProjects(p);
       setSkills(s);
       setExperiences(e);
       setCvs(c);
-      setAdminPasscode(pass);
     } catch (err) {
       console.error('Error loading portfolio data:', err);
     } finally {
@@ -219,18 +219,21 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return result;
   };
 
-  const updatePasscode = async (newPasscode: string) => {
-    await saveAdminPasscode(newPasscode);
-    setAdminPasscode(newPasscode.trim());
+  const isPasscodeConfigured = async (): Promise<boolean> => {
+    const hash = await fetchAdminPasscodeHash();
+    return !!hash;
   };
 
-  const verifyPasscode = (candidate: string): boolean => {
-    const trimmed = candidate.trim();
-    if (!adminPasscode) {
-      // If no passcode has been set in Firestore yet, allow setting or empty check
-      return false;
-    }
-    return trimmed === adminPasscode.trim();
+  const updatePasscode = async (newPasscode: string): Promise<void> => {
+    const hash = await hashPasscode(newPasscode);
+    await saveAdminPasscodeHash(hash);
+  };
+
+  const verifyPasscode = async (candidate: string): Promise<boolean> => {
+    const candidateHash = await hashPasscode(candidate);
+    const storedHash = await fetchAdminPasscodeHash();
+    if (!storedHash) return false;
+    return candidateHash === storedHash;
   };
 
   return (
@@ -243,7 +246,7 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         loading,
         isFirebaseConnected,
         firebaseConfig,
-        adminPasscode,
+        adminPasscode: '',
         saveConfig,
         removeConfig,
         addProject,
@@ -260,6 +263,7 @@ export const PortfolioProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setDefaultCV,
         seedFirestore,
         reloadAll: loadData,
+        isPasscodeConfigured,
         updatePasscode,
         verifyPasscode,
       }}

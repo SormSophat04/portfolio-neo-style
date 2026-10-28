@@ -23,7 +23,8 @@ export const ChangePasscodeCard: React.FC = () => {
     setStatusMessage(null);
 
     // Verify current passcode
-    if (!verifyPasscode(currentPass)) {
+    const isMatch = await verifyPasscode(currentPass);
+    if (!isMatch) {
       setStatusMessage({
         type: 'error',
         text: 'The current passcode you entered is incorrect.',

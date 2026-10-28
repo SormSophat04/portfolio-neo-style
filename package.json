@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "seed": "node scripts/seed-firestore.mjs",
+    "bot": "node scripts/telegram-response-bot.mjs",
     "deploy": "npm run build && firebase deploy"
   },
   "dependencies": {
@@ -16,6 +17,7 @@
     "firebase": "^12.19.0",
     "framer-motion": "^13.4.4",
     "lucide-react": "^1.48.0",
+    "nodemailer": "^10.2.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
@@ -23,6 +25,7 @@
     "@eslint/js": "^10.0.1",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.13.3",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
